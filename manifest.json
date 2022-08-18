@@ -1,0 +1,15 @@
+{
+  "domain": "lutron_caseta",
+  "name": "Lutron Cas\u00e9ta",
+  "documentation": "https://www.home-assistant.io/integrations/lutron_caseta",
+  "requirements": ["git+https://github.com/danaues/pylutron-caseta.git@occupancy-ra3#pylutron-caseta==0.14.0"],
+  "config_flow": true,
+  "zeroconf": ["_leap._tcp.local."],
+  "homekit": {
+    "models": ["Smart Bridge"]
+  },
+  "codeowners": ["@swails", "@bdraco"],
+  "iot_class": "local_push",
+  "version": "0.16.2"
+  "loggers": ["pylutron_caseta"]
+}
