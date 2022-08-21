@@ -41,6 +41,11 @@ def _reverse_dict(forward_dict: dict) -> dict:
     """Reverse a dictionary."""
     return {v: k for k, v in forward_dict.items()}
 
+LUTRON_MODEL_TO_TYPE = {
+    "RRST-W2B-XX": "SunnataKeypad_2Button",
+    "RRST-W3RL-XXa": "SunnataKeypad_3ButtonRaiseLower",
+    "RRST-W4B-XX": "SunnataKeypad_4Button",
+}
 
 SUPPORTED_INPUTS_EVENTS_TYPES = [ACTION_PRESS, ACTION_RELEASE]
 
@@ -266,21 +271,49 @@ FOUR_GROUP_REMOTE_TRIGGER_SCHEMA = LUTRON_BUTTON_TRIGGER_SCHEMA.extend(
     }
 )
 
+SUNNATA_KEYPAD_2_BUTTON_BUTTON_TYPES_TO_LEAP = {
+    "button_1": 1,
+    "button_2": 2,
+}
+SUNNATA_KEYPAD_2_BUTTON_TRIGGER_SCHEMA = LUTRON_BUTTON_TRIGGER_SCHEMA.extend(
+    {
+        vol.Required(CONF_SUBTYPE): vol.In(
+            SUNNATA_KEYPAD_2_BUTTON_BUTTON_TYPES_TO_LEAP
+        ),
+    }
+)
 
-SUNNATA_KEYPAD_BUTTON_BUTTON_TYPES_TO_LEAP = {
+
+SUNNATA_KEYPAD_3_BUTTON_RAISE_LOWER_BUTTON_TYPES_TO_LEAP = {
+    "button_1": 1,
+    "button_2": 2,
+    "button_3": 3,
+    "raise": 19,
+    "lower": 18,
+}
+SUNNATA_KEYPAD_3_BUTTON_RAISE_LOWER_TRIGGER_SCHEMA = (
+    LUTRON_BUTTON_TRIGGER_SCHEMA.extend(
+        {
+            vol.Required(CONF_SUBTYPE): vol.In(
+                SUNNATA_KEYPAD_3_BUTTON_RAISE_LOWER_BUTTON_TYPES_TO_LEAP
+            ),
+        }
+    )
+)
+
+SUNNATA_KEYPAD_4_BUTTON_BUTTON_TYPES_TO_LEAP = {
     "button_1": 1,
     "button_2": 2,
     "button_3": 3,
     "button_4": 4,
-    "raise": 19,
-    "lower": 18,
 }
-SUNNATA_KEYPAD_BUTTON_TRIGGER_SCHEMA = LUTRON_BUTTON_TRIGGER_SCHEMA.extend(
+SUNNATA_KEYPAD_4_BUTTON_TRIGGER_SCHEMA = LUTRON_BUTTON_TRIGGER_SCHEMA.extend(
     {
-        vol.Required(CONF_SUBTYPE): vol.In(SUNNATA_KEYPAD_BUTTON_BUTTON_TYPES_TO_LEAP),
+        vol.Required(CONF_SUBTYPE): vol.In(
+            SUNNATA_KEYPAD_4_BUTTON_BUTTON_TYPES_TO_LEAP
+        ),
     }
 )
-
 
 DEVICE_TYPE_SCHEMA_MAP = {
     "Pico2Button": PICO_2_BUTTON_TRIGGER_SCHEMA,
@@ -292,7 +325,9 @@ DEVICE_TYPE_SCHEMA_MAP = {
     "Pico4ButtonZone": PICO_4_BUTTON_ZONE_TRIGGER_SCHEMA,
     "Pico4Button2Group": PICO_4_BUTTON_2_GROUP_TRIGGER_SCHEMA,
     "FourGroupRemote": FOUR_GROUP_REMOTE_TRIGGER_SCHEMA,
-    "SunnataKeypad": SUNNATA_KEYPAD_BUTTON_TRIGGER_SCHEMA,
+    "SunnataKeypad_2Button": SUNNATA_KEYPAD_2_BUTTON_TRIGGER_SCHEMA,
+    "SunnataKeypad_3ButtonRaiseLower": SUNNATA_KEYPAD_3_BUTTON_RAISE_LOWER_TRIGGER_SCHEMA,
+    "SunnataKeypad_4Button": SUNNATA_KEYPAD_4_BUTTON_TRIGGER_SCHEMA,
 }
 
 DEVICE_TYPE_SUBTYPE_MAP_TO_LIP = {
@@ -317,7 +352,9 @@ DEVICE_TYPE_SUBTYPE_MAP_TO_LEAP = {
     "Pico4ButtonZone": PICO_4_BUTTON_ZONE_BUTTON_TYPES_TO_LEAP,
     "Pico4Button2Group": PICO_4_BUTTON_2_GROUP_BUTTON_TYPES_TO_LEAP,
     "FourGroupRemote": FOUR_GROUP_REMOTE_BUTTON_TYPES_TO_LEAP,
-    "SunnataKeypad": SUNNATA_KEYPAD_BUTTON_BUTTON_TYPES_TO_LEAP,
+    "SunnataKeypad_2Button": SUNNATA_KEYPAD_2_BUTTON_BUTTON_TYPES_TO_LEAP,
+    "SunnataKeypad_3ButtonRaiseLower": SUNNATA_KEYPAD_3_BUTTON_RAISE_LOWER_BUTTON_TYPES_TO_LEAP,
+    "SunnataKeypad_4Button": SUNNATA_KEYPAD_4_BUTTON_BUTTON_TYPES_TO_LEAP,
 }
 
 LEAP_TO_DEVICE_TYPE_SUBTYPE_MAP = {
@@ -332,7 +369,9 @@ TRIGGER_SCHEMA = vol.Any(
     PICO_4_BUTTON_ZONE_TRIGGER_SCHEMA,
     PICO_4_BUTTON_2_GROUP_TRIGGER_SCHEMA,
     FOUR_GROUP_REMOTE_TRIGGER_SCHEMA,
-    SUNNATA_KEYPAD_BUTTON_TRIGGER_SCHEMA,
+    SUNNATA_KEYPAD_2_BUTTON_TRIGGER_SCHEMA,
+    SUNNATA_KEYPAD_3_BUTTON_RAISE_LOWER_TRIGGER_SCHEMA,
+    SUNNATA_KEYPAD_4_BUTTON_TRIGGER_SCHEMA,
 )
 
 
@@ -346,9 +385,13 @@ async def async_validate_trigger_config(
     if not device:
         return config
 
-    if not (schema := DEVICE_TYPE_SCHEMA_MAP.get(device["type"])):
+    if not (
+        schema := DEVICE_TYPE_SCHEMA_MAP.get(
+            _lutron_model_to_device_type(device["model"], device["type"])
+        )
+    ):
         raise InvalidDeviceAutomationConfig(
-            f"Device type {device['type']} not supported: {config[CONF_DEVICE_ID]}"
+            f"Device model {device['model']} with type {device['type']} not supported: {config[CONF_DEVICE_ID]}"
         )
 
     return schema(config)
@@ -363,7 +406,9 @@ async def async_get_triggers(
     if not (device := get_button_device_by_dr_id(hass, device_id)):
         raise InvalidDeviceAutomationConfig(f"Device not found: {device_id}")
 
-    valid_buttons = DEVICE_TYPE_SUBTYPE_MAP_TO_LEAP.get(device["type"], {})
+    valid_buttons = DEVICE_TYPE_SUBTYPE_MAP_TO_LEAP.get(
+        _lutron_model_to_device_type(device["model"], device["type"]), {}
+    )
 
     for trigger in SUPPORTED_INPUTS_EVENTS_TYPES:
         for subtype in valid_buttons:
@@ -379,12 +424,15 @@ async def async_get_triggers(
 
     return triggers
 
-
-def _device_model_to_type(model: str) -> str:
+def _device_model_to_type(device_registry_model: str) -> str:
     """Convert a lutron_caseta device registry entry model to type."""
-    _, device_type = model.split(" ")
-    return device_type.replace("(", "").replace(")", "")
+    model, p_device_type = device_registry_model.split(" ")
+    device_type = p_device_type.replace("(", "").replace(")", "")
+    return _lutron_model_to_device_type(model, device_type)
 
+def _lutron_model_to_device_type(model: str, device_type: str) -> str:
+    """Get the mapped type based on the lutron model or type."""
+    return LUTRON_MODEL_TO_TYPE.get(model, device_type)
 
 async def async_attach_trigger(
     hass: HomeAssistant,
