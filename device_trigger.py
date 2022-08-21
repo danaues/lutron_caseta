@@ -43,7 +43,7 @@ def _reverse_dict(forward_dict: dict) -> dict:
 
 LUTRON_MODEL_TO_TYPE = {
     "RRST-W2B-XX": "SunnataKeypad_2Button",
-    "RRST-W3RL-XXa": "SunnataKeypad_3ButtonRaiseLower",
+    "RRST-W3RL-XX": "SunnataKeypad_3ButtonRaiseLower",
     "RRST-W4B-XX": "SunnataKeypad_4Button",
 }
 
