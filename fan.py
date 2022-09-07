@@ -89,4 +89,3 @@ class LutronCasetaFan(LutronCasetaDeviceUpdatableEntity, FanEntity):
     def is_on(self) -> bool:
         """Return true if device is on."""
         return bool(self.percentage)
-        
