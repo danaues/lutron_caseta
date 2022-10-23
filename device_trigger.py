@@ -348,9 +348,10 @@ async def async_validate_trigger_config(
         )
     ):
         # Trigger is invalid - raise error
-        raise InvalidDeviceAutomationConfig(
-            f"Device model {keypad['model']} with type {keypad['type']} not supported: {config[CONF_DEVICE_ID]}"
-        )
+        #raise InvalidDeviceAutomationConfig(
+        #    f"Device model {keypad['model']} with type {keypad['type']} not supported: {config[CONF_DEVICE_ID]}"
+        #)
+        return config
 
     return schema(config)
 
