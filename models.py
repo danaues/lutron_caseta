@@ -5,8 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from pylutron_caseta.smartbridge import Smartbridge
-
-from homeassistant.helpers.entity import DeviceInfo
+import voluptuous as vol
 
 
 @dataclass
@@ -15,5 +14,15 @@ class LutronCasetaData:
 
     bridge: Smartbridge
     bridge_device: dict[str, Any]
-    button_devices: dict[str, dict]
-    device_info_by_device_id: dict[int, DeviceInfo]
+    keypad_data: LutronKeypadData
+
+
+@dataclass
+class LutronKeypadData:
+    """Data for the lutron_caseta  integration keypads."""
+
+    dr_device_id_to_keypad: dict[str, dict]
+    keypads: dict[int, Any]
+    buttons: dict[int, Any]
+    button_names_to_leap: dict[int, dict[str, int]]
+    trigger_schemas: dict[int, vol.Schema]
